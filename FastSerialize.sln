@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastSerialize", "FastSerialize\FastSerialize.csproj", "{A7422E7D-5E20-4F21-BDFD-94C8CABE5E75}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastSerializeTest", "FastSerializeTest\FastSerializeTest.csproj", "{DB08AB2D-6237-43D2-B0BC-CF94E7E20E79}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+		Release4.0|Any CPU = Release4.0|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A7422E7D-5E20-4F21-BDFD-94C8CABE5E75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7422E7D-5E20-4F21-BDFD-94C8CABE5E75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7422E7D-5E20-4F21-BDFD-94C8CABE5E75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7422E7D-5E20-4F21-BDFD-94C8CABE5E75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7422E7D-5E20-4F21-BDFD-94C8CABE5E75}.Release4.0|Any CPU.ActiveCfg = Release4.0|Any CPU
+		{A7422E7D-5E20-4F21-BDFD-94C8CABE5E75}.Release4.0|Any CPU.Build.0 = Release4.0|Any CPU
+		{DB08AB2D-6237-43D2-B0BC-CF94E7E20E79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB08AB2D-6237-43D2-B0BC-CF94E7E20E79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB08AB2D-6237-43D2-B0BC-CF94E7E20E79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB08AB2D-6237-43D2-B0BC-CF94E7E20E79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB08AB2D-6237-43D2-B0BC-CF94E7E20E79}.Release4.0|Any CPU.ActiveCfg = Release4.0|Any CPU
+		{DB08AB2D-6237-43D2-B0BC-CF94E7E20E79}.Release4.0|Any CPU.Build.0 = Release4.0|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

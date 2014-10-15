@@ -1,0 +1,41 @@
+{
+    "_id": "543e80fa97fe26749fc29abd",
+    "index": 0,
+    "guid": "91f02416-0735-493a-98f1-2a58a916f0e7",
+    "isActive": false,
+    "balance": "$1,970.69",
+    "picture": "http://placehold.it/32x32",
+    "age": 32,
+    "eyeColor": "green",
+    "name": "Washington Santos",
+    "gender": "male","company": "LEXICONDO",
+    "email": "washingtonsantos@lexicondo.com",
+    "phone": "+1 (928) 464-3669",
+    "address": "701 Lancaster Avenue, Chautauqua, New Jersey, 5105",
+    "about": "Sunt adipisicing proident incididunt esse do commodo tempor sunt amet reprehenderit. Quis ut quis aute exercitation ullamco ullamco in. Ullamco laborum cupidatat aliquip ullamco culpa enim voluptate et in Lorem voluptate commodo ipsum. Sunt magna et non in irure cillum aliqua adipisicing officia aliqua consequat nulla cillum. Eiusmod consequat ea tempor sunt eu ex.\r\n",
+    "registered": "2014-02-07T03:18:31 +07:00",
+    "latitude": -83.723343,
+    "longitude": -126.520588,
+    "tags": ["esse","ut",
+      "elit",
+      "ipsum",
+      "irure",
+      "elit",
+      "cupidatat"
+    ],
+    "friends": [{
+        "id": 0,
+        "name": "Leta Franks"
+      },
+      {
+        "id": 1,
+        "name": "Kerr York"
+      },
+      {
+        "id": 2,
+        "name": "Tyson Huffman"
+      }
+    ],
+    "greeting": "Hello, Washington Santos! You have 10 unread messages.",
+    "favoriteFruit": "strawberry"
+  }

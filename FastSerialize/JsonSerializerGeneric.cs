@@ -28,10 +28,10 @@ namespace FastSerialize
         {
             typeCache = new Dictionary<Type, TypeCache>();
         }
-        public string Serialize(object o, bool outputNull = false)
+        public string Serialize(object o, bool outputNull = false, bool typeHints = true)
         {
             StringBuilder result = new StringBuilder();
-            SerializeObject(o, result, outputNull);
+            SerializeObject(o, result, outputNull, typeHints);
             return result.ToString();
         }
         private string EscapeString(String o)
@@ -44,7 +44,7 @@ namespace FastSerialize
             return o;
 
         }
-        private void SerializeObject(object o, StringBuilder result, bool outputNull)
+        private void SerializeObject(object o, StringBuilder result, bool outputNull, bool typeHints)
         {
             if (outputNull && o == null)
                 result.Append("null");
@@ -62,9 +62,10 @@ namespace FastSerialize
                             if (!first)
                                 result.Append(',');
                             first = false;
-                            SerializeObject(value, result, outputNull);
+                            SerializeObject(value, result, outputNull, typeHints);
                         }
                         result.Append(']');
+                        result.Append("\r\n");
                         break;
                     }
                     if (iType == typeof(IDictionary))
@@ -80,9 +81,10 @@ namespace FastSerialize
                             result.Append(value.Key);
                             result.Append('"');
                             result.Append(':');
-                            SerializeObject(value.Value, result, outputNull);
+                            SerializeObject(value.Value, result, outputNull, typeHints);
                         }
                         result.Append('}');
+                        result.Append("\r\n");
                         break;
                     }
                 }
@@ -123,32 +125,53 @@ namespace FastSerialize
                     typeCache.Add(dataType, cache);
                 }
                 int count = 0;
+                bool first = true;
+                if (typeHints)
+                {
+                    result.Append("\"__type\"");
+                    result.Append(':');
+                    result.Append('"');
+                    result.Append(dataType.Name);
+                    result.Append("#");
+                    result.Append(dataType.Namespace);
+                    result.Append('"');
+                    first = false;
+                }
                 foreach (string key in cache.properties.Keys)
                 {
+
                     object pObj = cache.properties[key].getter(o);
                     if (pObj != null)
                     {
+                        if (!first)
+                        {
+                            result.Append(',');
+                        }
+                        first = false;
                         result.Append('"');
                         result.Append(key);
                         result.Append('"');
                         result.Append(':');
-                        SerializeObject(pObj, result, outputNull);
-                        if (count < cache.properties.Keys.Count - 1)
-                            result.Append(',');
+                        SerializeObject(pObj, result, outputNull, typeHints);
+                        result.Append("\r\n");
                     }
                     else if (outputNull)
                     {
+                        if (!first)
+                        {
+                            result.Append(',');
+                        }
+                        first = false;
                         result.Append('"');
                         result.Append(key);
                         result.Append('"');
                         result.Append(':');
                         result.Append("null");
-                        if (count < cache.properties.Keys.Count - 1)
-                            result.Append(',');
                     }
                     count++;
                 }
                 result.Append('}');
+                result.Append("\r\n");
 
             }
 
@@ -413,9 +436,25 @@ namespace FastSerialize
             }
             throw new Exception("Unexpected character when reading value, expected null: " + s.Current);
         }
+        
 
         private T ConsumeObject<T>(IEnumerator s)
         {
+            var type = typeof(T);
+            if (type.IsGenericType)
+            {
+                foreach (var i in type.GetInterfaces())
+                {
+                    if (i == typeof(IDictionary))
+                    {
+                        
+                        var dict = (IDictionary)TypeHelper.GetConstructor(type)();
+                       var genericType = type.GetGenericArguments()[1];
+                       return (T)ConsumeIntoDictionary(s, dict, genericType);
+                    }
+                }
+            }
+
             return (T)ConsumeObject(s, typeof(T));
         }
         private object ConsumeObject(IEnumerator s, Type instanceType)
@@ -428,7 +467,7 @@ namespace FastSerialize
                 cache = new TypeCache(instanceType);
                 typeCache.Add(instanceType, cache);
             }
-            Object instance = cache.constructor();
+            Object instance = null;
             char c = ' ';
             do
             {
@@ -437,6 +476,38 @@ namespace FastSerialize
                 {
                     case '"':
                         string propertyName = ParseString(s);
+                        if (propertyName == "__type")
+                        {
+                            s.MoveNext();
+                            if (!ConsumeWhiteSpace(s))
+                                throw new Exception("Parse Error");
+                            if ((char)s.Current != ':')
+                                throw new Exception("Parse Error");
+                            s.MoveNext();
+                            if (!ConsumeWhiteSpace(s))
+                                throw new Exception("Parse Error");
+                            string propertyType = ParseString(s);
+
+                            var newType = TypeHelper.ResolveType(propertyType);
+
+                            if (instanceType == newType)
+                            {
+                                instance = cache.constructor();
+                                continue;
+                            }
+                            instanceType = newType;
+                            if (!typeCache.TryGetValue(instanceType, out cache))
+                            {
+                                cache = new TypeCache(instanceType);
+                                typeCache.Add(instanceType, cache);
+                            }
+                            instance = cache.constructor();
+                            continue;
+                        }
+                        else
+                        {
+                            instance = cache.constructor();
+                        }
                         PropertyAccessor accessor;
                         if (!cache.properties.TryGetValue(propertyName, out accessor))
                         {
@@ -458,7 +529,7 @@ namespace FastSerialize
                                             accessor = property.Value;
                                         }
                                     }
-                                    else if (property.Value.ignoreCase != null)
+                                    else if (property.Value.ignoreCase)
                                     {
                                         if (propertyName.ToLower() == property.Key.ToLower())
                                         {
@@ -478,8 +549,6 @@ namespace FastSerialize
                         s.MoveNext();
                         if (!ConsumeWhiteSpace(s))
                             throw new Exception("Parse Error");
-                        
-
 
                          if (accessor.isDictionary)
                         {

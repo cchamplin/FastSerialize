@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace FastSerialize
 {
+
     public class TypeCache
     {
         public Dictionary<string, PropertyAccessor> properties;

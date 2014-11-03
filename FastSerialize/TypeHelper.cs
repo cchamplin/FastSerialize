@@ -13,11 +13,29 @@ namespace FastSerialize
     public static class TypeHelper
     {
         public static Dictionary<Type, ConstructorDelegate> _constructorCache;
+        public static Dictionary<String, Type> _resolvedTypeCache;
         static TypeHelper()
         {
             _constructorCache = new Dictionary<Type, ConstructorDelegate>();
+            _resolvedTypeCache = new Dictionary<string, Type>();
         }
         public delegate object ConstructorDelegate();
+        public static Type ResolveType(string lookup) {
+            lock (_resolvedTypeCache)
+            {
+                Type t;
+                if (_resolvedTypeCache.TryGetValue(lookup, out t))
+                    return t;
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+                var name = lookup.Substring(0, lookup.IndexOf('#'));
+                var ns = lookup.Substring(lookup.IndexOf('#')+1);
+                t = assemblies.SelectMany(a => a.GetTypes())
+                                        .Single(ty => (ty.Name == name && ty.Namespace == ns));
+                _resolvedTypeCache.Add(lookup, t);
+                return t;
+            }
+        }
         public static ConstructorDelegate GetConstructor(Type type)
         {
             lock (_constructorCache)
@@ -134,19 +152,25 @@ namespace FastSerialize
                     }
                 }
             }
+            ILGenerator gen;
+            DynamicMethod method;
+            LocalBuilder loc;
+            if (pi.CanWrite)
+            {
+                method = new System.Reflection.Emit.DynamicMethod("__setter" + pi.Name, typeof(void), new Type[] { typeof(Object), typeof(Object) }, t, true);
 
-            DynamicMethod method = new System.Reflection.Emit.DynamicMethod("__setter" + pi.Name, typeof(void), new Type[] { typeof(Object), typeof(Object) }, t, true);
 
-            ILGenerator gen = method.GetILGenerator();
-            LocalBuilder loc = t.IsValueType ? gen.DeclareLocal(t) : null;
-            gen.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
-            TypeHelper.Cast(gen, t, loc);
-            gen.Emit(System.Reflection.Emit.OpCodes.Ldarg_1);
-            TypeHelper.Cast(gen, pi.PropertyType, null);
-            gen.EmitCall(t.IsValueType ? OpCodes.Call : OpCodes.Callvirt, pi.GetSetMethod(), null);
-            gen.Emit(System.Reflection.Emit.OpCodes.Ret);
-            setter = (PropertySetter)method.CreateDelegate(typeof(PropertySetter));
-            
+                gen = method.GetILGenerator();
+
+                loc = t.IsValueType ? gen.DeclareLocal(t) : null;
+                gen.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
+                TypeHelper.Cast(gen, t, loc);
+                gen.Emit(System.Reflection.Emit.OpCodes.Ldarg_1);
+                TypeHelper.Cast(gen, pi.PropertyType, null);
+                gen.EmitCall(t.IsValueType ? OpCodes.Call : OpCodes.Callvirt, pi.GetSetMethod(), null);
+                gen.Emit(System.Reflection.Emit.OpCodes.Ret);
+                setter = (PropertySetter)method.CreateDelegate(typeof(PropertySetter));
+            }
             
 
 

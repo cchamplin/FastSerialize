@@ -28,10 +28,10 @@ namespace FastSerialize
         {
             typeCache = new Dictionary<Type, TypeCache>();
         }
-        public string Serialize(object o, bool outputNull = false)
+        public string Serialize(object o, bool outputNull = false, bool typeHints = true)
         {
             StringBuilder result = new StringBuilder();
-            SerializeObject(o, result, outputNull);
+            SerializeObject(o, result, outputNull, typeHints);
             return result.ToString();
         }
         private string EscapeString(String o)
@@ -44,7 +44,7 @@ namespace FastSerialize
             return o;
 
         }
-        private void SerializeObject(object o, StringBuilder result, bool outputNull)
+        private void SerializeObject(object o, StringBuilder result, bool outputNull, bool typeHints)
         {
             if (outputNull && o == null)
                 result.Append("null");
@@ -62,9 +62,10 @@ namespace FastSerialize
                             if (!first)
                                 result.Append(',');
                             first = false;
-                            SerializeObject(value,result, outputNull);
+                            SerializeObject(value,result, outputNull, typeHints);
                         }
                         result.Append(']');
+                        result.Append("\r\n");
                         break;
                     }
                     if (iType == typeof(IDictionary))
@@ -80,9 +81,10 @@ namespace FastSerialize
                             result.Append(value.Key);
                             result.Append('"');
                             result.Append(':');
-                            SerializeObject(value.Value, result, outputNull);
+                            SerializeObject(value.Value, result, outputNull, typeHints);
                         }
-                        result.Append('}');
+                        result[result.Length] = '}';
+                        result.Append("\r\n");
                         break;
                     }
                 }
@@ -132,9 +134,12 @@ namespace FastSerialize
                         result.Append(key);
                         result.Append('"');
                         result.Append(':');
-                        SerializeObject(pObj, result, outputNull);
+                        SerializeObject(pObj, result, outputNull, typeHints);
                         if (count < cache.properties.Keys.Count - 1)
+                        {
                             result.Append(',');
+                            result.Append("\r\n");
+                        }
                     }
                     else if (outputNull) {
                         result.Append('"');
@@ -143,12 +148,16 @@ namespace FastSerialize
                         result.Append(':');
                         result.Append("null");
                         if (count < cache.properties.Keys.Count - 1)
+                        {
+
                             result.Append(',');
+                            result.Append("\r\n");
+                        }
                     }
                     count++;
                 }
                 result.Append('}');
-
+                result.Append("\r\n");
             }
         }
 

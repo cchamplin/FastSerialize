@@ -9,7 +9,7 @@ namespace FastSerialize
 {
     internal interface ISerializer
     {
-        string Serialize(Object o, bool outputNull = false);
+        string Serialize(Object o, bool outputNull = false, bool typeHints = true);
 
         // object Deserialize(String s);
 

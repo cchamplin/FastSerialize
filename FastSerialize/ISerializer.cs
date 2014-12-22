@@ -13,7 +13,7 @@ namespace FastSerialize
 
         // object Deserialize(String s);
 
-        T Deserialize<T>(String s);
-        T Deserialize<T>(Stream s);
+        T Deserialize<T>(String s, bool @explicit = true);
+        T Deserialize<T>(Stream s, bool @explicit = true);
     }
 }

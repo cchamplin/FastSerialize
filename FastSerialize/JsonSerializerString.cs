@@ -161,11 +161,11 @@ namespace FastSerialize
             }
         }
 
-        public T Deserialize<T>(Stream s)
+        public T Deserialize<T>(Stream s,bool @explicit = true)
         {
             throw new NotImplementedException();
         }
-        public T Deserialize<T>(string s)
+        public T Deserialize<T>(string s, bool @explicit = true)
         {
 
             char c;

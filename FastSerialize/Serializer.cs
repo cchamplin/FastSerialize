@@ -23,17 +23,22 @@ namespace FastSerialize
         {
             return _serializer.Serialize(o, outputNulls);
         }
+
+        public string Serialize(Object o, bool outputNulls, bool typeHints)
+        {
+            return _serializer.Serialize(o, outputNulls, typeHints);
+        }
         /*public object Deserialize(String s)
         {
             return null;
         }*/
-        public T Deserialize<T>(String s)
+        public T Deserialize<T>(String s, bool @explicit = true)
         {
-            return _serializer.Deserialize<T>(s);
+            return _serializer.Deserialize<T>(s, @explicit);
         }
-        public T Deserialize<T>(Stream s)
+        public T Deserialize<T>(Stream s,bool @explicit = true)
         {
-            return _serializer.Deserialize<T>(s);
+            return _serializer.Deserialize<T>(s, @explicit);
         }
     }
 }

@@ -43,6 +43,66 @@ namespace FastSerializeTest
         }
 
         [TestMethod]
+        public void TestComplexSerialize()
+        {
+            StreamReader sr = new StreamReader("TestCases/complex_01.json");
+            var json = sr.ReadToEnd();
+
+            Serializer s = new Serializer(typeof(JsonSerializerGeneric));
+
+            List<ComplexType> data = s.Deserialize<List<ComplexType>>(json);
+            string result = s.Serialize(data);
+            result.ToString();
+            System.Diagnostics.Debug.Write(result.ToString());
+        }
+
+        [TestMethod]
+        public void TestDeserialize_Mising01_String()
+        {
+            StreamReader sr = new StreamReader("TestCases/missing_01.json");
+            var json = sr.ReadToEnd();
+
+            Serializer s = new Serializer(typeof(JsonSerializerGeneric));
+
+            SimpleType result = s.Deserialize<SimpleType>(json,false);
+
+            if (result == null || result.Foo != "Test" || result.Bar != 55 || result.FooBar != "Value1")
+                throw new Exception("Data mismatch");
+
+        }
+
+        [TestMethod]
+        public void TestDeserialize_Mising02_String()
+        {
+            StreamReader sr = new StreamReader("TestCases/missing_02.json");
+            var json = sr.ReadToEnd();
+
+            Serializer s = new Serializer(typeof(JsonSerializerGeneric));
+
+            SimpleType result = s.Deserialize<SimpleType>(json, false);
+
+            if (result == null || result.Foo != "Test" || result.Bar != 55 || result.FooBar != "Value1")
+                throw new Exception("Data mismatch");
+
+        }
+
+        [TestMethod]
+        public void TestDeserialize_Mising03_String()
+        {
+            StreamReader sr = new StreamReader("TestCases/missing_03.json");
+            var json = sr.ReadToEnd();
+
+            Serializer s = new Serializer(typeof(JsonSerializerGeneric));
+
+            SimpleType result = s.Deserialize<SimpleType>(json, false);
+
+            if (result == null || result.Foo != "Test" || result.Bar != 55 || result.FooBar != "Value1")
+                throw new Exception("Data mismatch");
+
+        }
+
+
+        [TestMethod]
         public void TestDeserialize_Simple01_String()
         {
             StreamReader sr = new StreamReader("TestCases/simple_01.json");

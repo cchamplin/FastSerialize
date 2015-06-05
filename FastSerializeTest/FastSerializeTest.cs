@@ -12,21 +12,7 @@ namespace FastSerializeTest
     public class FastSerializeTest
     {
 
-        [TestMethod]
-        public void TestTypeCache()
-        {
-
-            
-
-            TypeCache tc = new TypeCache(typeof(SimpleType));
-            SimpleType instance = (SimpleType)tc.constructor();
-
-   
-            tc.properties["FooProperty"].setter(instance, (object)15);
-
-            if (instance.FooProperty != 15)
-                throw new ArgumentException("Invalid Value");
-        }
+        
 
         [TestMethod]
         public void TestSimpleSerialize()

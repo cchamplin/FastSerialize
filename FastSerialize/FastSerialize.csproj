@@ -55,6 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Attributes.cs" />
+    <Compile Include="ISerializable.cs" />
     <Compile Include="JsonSerializerString.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="JsonSerializerGeneric.cs" />

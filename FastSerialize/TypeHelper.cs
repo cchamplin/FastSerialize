@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -10,19 +11,18 @@ using System.Threading.Tasks;
 
 namespace FastSerialize
 {
-    public static class TypeHelper
+    internal static class TypeHelper
     {
-        public static Dictionary<Type, ConstructorDelegate> _constructorCache;
-        public static Dictionary<String, Type> _resolvedTypeCache;
+        public static ConcurrentDictionary<Type, ConstructorDelegate> _constructorCache;
+        public static ConcurrentDictionary<String, Type> _resolvedTypeCache;
         static TypeHelper()
         {
-            _constructorCache = new Dictionary<Type, ConstructorDelegate>();
-            _resolvedTypeCache = new Dictionary<string, Type>();
+            _constructorCache = new ConcurrentDictionary<Type, ConstructorDelegate>();
+            _resolvedTypeCache = new ConcurrentDictionary<string, Type>();
         }
         public delegate object ConstructorDelegate();
         public static Type ResolveType(string lookup) {
-            lock (_resolvedTypeCache)
-            {
+            
                 Type t;
                 if (_resolvedTypeCache.TryGetValue(lookup, out t))
                     return t;
@@ -32,14 +32,13 @@ namespace FastSerialize
                 var ns = lookup.Substring(lookup.IndexOf('#')+1);
                 t = assemblies.SelectMany(a => a.GetTypes())
                                         .Single(ty => (ty.Name == name && ty.Namespace == ns));
-                _resolvedTypeCache.Add(lookup, t);
+                _resolvedTypeCache.TryAdd(lookup, t);
                 return t;
-            }
+            
         }
         public static ConstructorDelegate GetConstructor(Type type)
         {
-            lock (_constructorCache)
-            {
+            
                 ConstructorDelegate tDel;
                 if (_constructorCache.TryGetValue(type, out tDel))
                     return tDel;
@@ -56,11 +55,11 @@ namespace FastSerialize
                     gen.Emit(System.Reflection.Emit.OpCodes.Newobj, ci);
                     gen.Emit(System.Reflection.Emit.OpCodes.Ret);
                     tDel = (ConstructorDelegate)method.CreateDelegate(typeof(ConstructorDelegate));
-                    _constructorCache.Add(type, tDel);
+                    _constructorCache.TryAdd(type, tDel);
                     return tDel;
                 }
                 return () => Activator.CreateInstance(type);
-            }
+            
         }
         public static void Cast(ILGenerator il, Type type, LocalBuilder addr)
         {
@@ -171,24 +170,25 @@ namespace FastSerialize
                 gen.Emit(System.Reflection.Emit.OpCodes.Ret);
                 setter = (PropertySetter)method.CreateDelegate(typeof(PropertySetter));
             }
-            
 
 
-            method = new System.Reflection.Emit.DynamicMethod("__getter" + pi.Name, typeof(object), new Type[] { typeof(object) }, t, true);
-
-            gen = method.GetILGenerator();
-            loc = t.IsValueType ? gen.DeclareLocal(t) : null;
-            gen.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
-            TypeHelper.Cast(gen, t, loc);
-            gen.EmitCall(t.IsValueType ? OpCodes.Call : OpCodes.Callvirt, pi.GetGetMethod(), null);
-            if (pi.PropertyType.IsValueType)
+            if (pi.CanRead)
             {
-                gen.Emit(OpCodes.Box, pi.PropertyType);
-            }
-            //TypeHelper.Cast(gen, typeof(object), null);
-            gen.Emit(System.Reflection.Emit.OpCodes.Ret);
-            getter = (PropertyGetter)method.CreateDelegate(typeof(PropertyGetter));
+                method = new System.Reflection.Emit.DynamicMethod("__getter" + pi.Name, typeof(object), new Type[] { typeof(object) }, t, true);
 
+                gen = method.GetILGenerator();
+                loc = t.IsValueType ? gen.DeclareLocal(t) : null;
+                gen.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
+                TypeHelper.Cast(gen, t, loc);
+                gen.EmitCall(t.IsValueType ? OpCodes.Call : OpCodes.Callvirt, pi.GetGetMethod(), null);
+                if (pi.PropertyType.IsValueType)
+                {
+                    gen.Emit(OpCodes.Box, pi.PropertyType);
+                }
+                //TypeHelper.Cast(gen, typeof(object), null);
+                gen.Emit(System.Reflection.Emit.OpCodes.Ret);
+                getter = (PropertyGetter)method.CreateDelegate(typeof(PropertyGetter));
+            }
            
         }
         public PropertyAccessor(Type t, FieldInfo fi)

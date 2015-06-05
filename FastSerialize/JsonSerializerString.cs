@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,7 +11,7 @@ namespace FastSerialize
 {
     public class JsonSerializerString : ISerializer
     {
-        Dictionary<Type, TypeCache> typeCache;
+        ConcurrentDictionary<Type, TypeCache> typeCache;
         private StringBuilder bldr = new StringBuilder(32000);
 
         static sbyte[] ht =
@@ -26,7 +27,7 @@ namespace FastSerialize
 
         internal JsonSerializerString()
         {
-            typeCache = new Dictionary<Type, TypeCache>();
+            typeCache = new ConcurrentDictionary<Type, TypeCache>();
         }
         public string Serialize(object o, bool outputNull = false, bool typeHints = true)
         {
@@ -104,6 +105,18 @@ namespace FastSerialize
                 {
                     result.Append(o.ToString().ToLower());
                 }
+                else if (dataType == typeof(TimeSpan))
+                {
+                    result.Append("\"");
+                    result.Append(o.ToString());
+                    result.Append("\"");
+                }
+                else if (dataType == typeof(DateTime))
+                {
+                    result.Append("\"");
+                    result.Append(((DateTime)o).ToString("yyyy-MM-ddTHH:mm:ssZ"));
+                    result.Append("\"");
+                }
                 else
                 {
                     result.Append(o.ToString());
@@ -122,11 +135,15 @@ namespace FastSerialize
                 if (!typeCache.TryGetValue(dataType, out cache))
                 {
                     cache = new TypeCache(dataType);
-                    typeCache.Add(dataType, cache);
+                    typeCache.TryAdd(dataType, cache);
                 }
                 int count = 0;
                 foreach (string key in cache.properties.Keys)
                 {
+                    if (cache.properties[key].getter == null)
+                    {
+                        continue;
+                    }
                     object pObj = cache.properties[key].getter(o);
                     if (pObj != null)
                     {
@@ -416,7 +433,7 @@ namespace FastSerialize
             if (!typeCache.TryGetValue(instanceType, out cache))
             {
                 cache = new TypeCache(instanceType);
-                typeCache.Add(instanceType, cache);
+                typeCache.TryAdd(instanceType, cache);
             }
             Object instance = cache.constructor();
             char c;
@@ -468,17 +485,24 @@ namespace FastSerialize
                             throw new Exception("Parse Error");
                         if (!ConsumeWhiteSpace(s, ref index))
                             throw new Exception("Parse Error");
-                        if (accessor.isDictionary)
+                        if (accessor == null || accessor.getter == null || accessor.setter == null)
                         {
-                            IDictionary dict = (IDictionary)accessor.getter(instance);
-                            if (dict == null)
-                                dict = (IDictionary)TypeHelper.GetConstructor(accessor.type)();
-                            accessor.setter(instance, ConsumeIntoDictionary(s, ref index, dict, accessor.genericType));
-                            break;
+                            IgnoreValue(s,ref index);
                         }
-                        accessor.setter(instance, ConsumeValue(s, ref index, accessor.type));
-                        if (s[index] == '}')
-                            index--;
+                        else
+                        {
+                            if (accessor.isDictionary)
+                            {
+                                IDictionary dict = (IDictionary)accessor.getter(instance);
+                                if (dict == null)
+                                    dict = (IDictionary)TypeHelper.GetConstructor(accessor.type)();
+                                accessor.setter(instance, ConsumeIntoDictionary(s, ref index, dict, accessor.genericType));
+                                break;
+                            }
+                            accessor.setter(instance, ConsumeValue(s, ref index, accessor.type));
+                            if (s[index] == '}')
+                                index--;
+                        }
                         break;
                     case ',':
                         continue;
@@ -532,6 +556,73 @@ namespace FastSerialize
             }
 
             return dict;
+        }
+        private void IgnoreValue(string s, ref int index)
+        {
+            int listNest = 0;
+            int objectNest = 0;
+            char expectedEnd = ' ';
+            char c;
+            for (; index < s.Length; index++)
+            {
+                c = s[index];
+                switch (c)
+                {
+                    case ',':
+                        if (listNest == 0 && objectNest == 0)
+                            return;
+                        break;
+                    case '"':
+                        ParseString(s, ref index);
+                        if (listNest == 0 && objectNest == 0)
+                            return;
+                        break;
+                    case '0':
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '5':
+                    case '6':
+                    case '7':
+                    case '8':
+                    case '9':
+                    case '.':
+                    case '-':
+                    case '+':
+                    case 'e':
+                    case 'E':
+                        parseNumeric(s, ref index, false);
+                        if (listNest == 0 && objectNest == 0)
+                            return;
+                        break;
+                    case '[':
+                        listNest++;
+                        break;
+                    case ']':
+                        listNest--;
+                        if (listNest == 0 && objectNest == 0)
+                            return;
+                        break;
+                    case '{':
+                        objectNest++;
+                        break;
+                    case '}':
+                        objectNest--;
+                        if (listNest == 0 && objectNest == 0)
+                            return;
+                        break;
+                    case ':':
+                    case ' ':
+                    case '\n':
+                    case '\r':
+                    case '\t':
+                        break;
+                    default:
+                        throw new Exception("Unexpected character");
+
+                }
+            }
         }
         private T ConsumeValue<T>(string s, ref int index)
         {

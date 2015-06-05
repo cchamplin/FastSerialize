@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace FastSerialize
 {
-    internal interface ISerializer
+    public interface ISerializer
     {
         string Serialize(Object o, bool outputNull = false, bool typeHints = true);
 

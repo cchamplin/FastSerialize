@@ -148,6 +148,18 @@ namespace FastSerialize
                 {
                     result.Append(o.ToString().ToLower());
                 }
+                else if (dataType == typeof(TimeSpan))
+                {
+                    result.Append("\"");
+                    result.Append(o.ToString());
+                    result.Append("\"");
+                }
+                else if (dataType == typeof(DateTime))
+                {
+                    result.Append("\"");
+                    result.Append(((DateTime)o).ToString("yyyy-MM-ddTHH:mm:ssZ"));
+                    result.Append("\"");
+                }
                 else
                 {
                     result.Append(o.ToString());
@@ -202,7 +214,8 @@ namespace FastSerialize
                 }
                 foreach (string key in cache.properties.Keys)
                 {
-
+                    if (cache.properties[key].getter == null)
+                        continue;
                     object pObj = cache.properties[key].getter(o);
                     if (pObj != null)
                     {
@@ -480,6 +493,10 @@ namespace FastSerialize
                             u4 = (char)s.Current;
                             bldr.Append((char)parseUnicode(u1,u2,u3,u4));
                             break;
+                        default:
+                            bldr.Append('\\');
+                            bldr.Append(c);
+                            break;
                     }
                 }
                 else if (c == '"')
@@ -630,7 +647,7 @@ namespace FastSerialize
                         s.MoveNext();
                         if (!ConsumeWhiteSpace(s))
                             throw new Exception("Parse Error");
-                        if (accessor == null)
+                        if (accessor == null || accessor.getter == null || accessor.setter == null)
                         {
                             IgnoreValue(s);
                         }

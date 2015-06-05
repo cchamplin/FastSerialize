@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -8,13 +9,13 @@ using System.Threading.Tasks;
 namespace FastSerialize
 {
 
-    public class TypeCache
+    internal class TypeCache
     {
-        public Dictionary<string, PropertyAccessor> properties;
+        public ConcurrentDictionary<string, PropertyAccessor> properties;
         public TypeCache(Type t)
         {
             constructor = TypeHelper.GetConstructor(t);
-            properties = new Dictionary<string, PropertyAccessor>();
+            properties = new ConcurrentDictionary<string, PropertyAccessor>();
             PropertyInfo[] typeProperties = t.GetProperties(BindingFlags.Public | BindingFlags.Instance);
             FieldInfo[] typeFields = t.GetFields(BindingFlags.Public | BindingFlags.Instance);
 
@@ -23,20 +24,20 @@ namespace FastSerialize
                 var p = new PropertyAccessor(t,pi);
                 if (p.accessFor != null)
                 {
-                    properties.Add(p.accessFor, p);
+                    properties.TryAdd(p.accessFor, p);
                     continue;
                 }
-                properties.Add(pi.Name, p);
+                properties.TryAdd(pi.Name, p);
             }
             foreach (FieldInfo fi in typeFields)
             {
                 var f = new PropertyAccessor(t, fi);
                 if (f.accessFor != null)
                 {
-                    properties.Add(f.accessFor, f);
+                    properties.TryAdd(f.accessFor, f);
                     continue;
                 }
-                properties.Add(fi.Name, f);
+                properties.TryAdd(fi.Name, f);
             }
         }
         public TypeHelper.ConstructorDelegate constructor;

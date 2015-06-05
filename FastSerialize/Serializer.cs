@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace FastSerialize
 {
-    public class Serializer
+    public class Serializer : ISerializer
     {
         private ISerializer _serializer;
 

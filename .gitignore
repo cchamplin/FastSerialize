@@ -1,0 +1,17 @@
+FastSerializePerformance
+FastSerializePerformance/*
+TestResults/*
+TestResults
+packages
+packages/*
+data.json
+*.suo
+packages.config
+*.exe
+bin
+obj
+bin/*
+obj/*
+*/bin/*
+*/obj/*
+*.snk

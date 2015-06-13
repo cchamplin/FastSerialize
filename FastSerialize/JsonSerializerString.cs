@@ -32,7 +32,7 @@ namespace FastSerialize
         public string Serialize(object o, bool outputNull = false, bool typeHints = true)
         {
             StringBuilder result = new StringBuilder();
-            SerializeObject(o, result, outputNull, typeHints);
+            SerializeObject(o, result, 0, true, outputNull, typeHints);
             return result.ToString();
         }
         private string EscapeString(String o)
@@ -45,7 +45,7 @@ namespace FastSerialize
             return o;
 
         }
-        private void SerializeObject(object o, StringBuilder result, bool outputNull, bool typeHints)
+        private void SerializeObject(object o, StringBuilder result, int level, bool propValue, bool outputNull, bool typeHints)
         {
             if (outputNull && o == null)
                 result.Append("null");
@@ -56,36 +56,72 @@ namespace FastSerialize
                 {
                     if (iType == typeof(IList))
                     {
+                        if (!propValue)
+                        {
+                            for (int x = 0; x < level; x++)
+                            {
+                                result.Append("  ");
+                            }
+                        }
                         result.Append('[');
+                        result.Append("\r\n");
                         bool first = true;
                         foreach (var value in (IList)o)
                         {
                             if (!first)
+                            {
                                 result.Append(',');
+                                result.Append("\r\n");
+                            }
                             first = false;
-                            SerializeObject(value,result, outputNull, typeHints);
+                            SerializeObject(value, result, level + 1, false, outputNull, typeHints);
+                        }
+                        result.Append("\r\n");
+                        for (int x = 0; x < level; x++)
+                        {
+                            result.Append("  ");
                         }
                         result.Append(']');
-                        result.Append("\r\n");
+                        //result.Append("\r\n");
                         break;
                     }
                     if (iType == typeof(IDictionary))
                     {
                         bool first = true;
+                        if (!propValue)
+                        {
+                            for (int x = 0; x < level; x++)
+                            {
+                                result.Append("  ");
+                            }
+                        }
                         result.Append('{');
+                        result.Append("\r\n");
+                        level++;
                         foreach (DictionaryEntry value in ((IDictionary)o))
                         {
                             if (!first)
+                            {
                                 result.Append(',');
+                                result.Append("\r\n");
+                            }
                             first = false;
+                            for (int x = 0; x < level; x++)
+                            {
+                                result.Append("  ");
+                            }
                             result.Append('"');
                             result.Append(value.Key);
                             result.Append('"');
                             result.Append(':');
-                            SerializeObject(value.Value, result, outputNull, typeHints);
+                            SerializeObject(value.Value, result, level, true, outputNull, typeHints);
                         }
-                        result[result.Length] = '}';
-                        result.Append("\r\n");
+                        for (int x = 0; x < level; x++)
+                        {
+                            result.Append("  ");
+                        }
+                        result.Append('}');
+                        //result.Append("\r\n");
                         break;
                     }
                 }
@@ -98,12 +134,26 @@ namespace FastSerialize
 
                 }
                 result.Append(']');
+                result.Append("\r\n");
             }
             else if (dataType.IsValueType)
             {
+                if (!propValue)
+                {
+                    for (int x = 0; x < level; x++)
+                    {
+                        result.Append("  ");
+                    }
+                }
                 if (dataType == typeof(bool))
                 {
                     result.Append(o.ToString().ToLower());
+                }
+                else if (dataType == typeof(Guid))
+                {
+                    result.Append("\"");
+                    result.Append(o.ToString());
+                    result.Append("\"");
                 }
                 else if (dataType == typeof(TimeSpan))
                 {
@@ -124,13 +174,25 @@ namespace FastSerialize
             }
             else if (dataType == typeof(string))
             {
+                if (!propValue)
+                {
+                    for (int x = 0; x < level; x++)
+                    {
+                        result.Append("  ");
+                    }
+                }
                 result.Append('"');
                 result.Append(EscapeString((string)o));
                 result.Append('"');
             }
             else
             {
+                for (int x = 0; x < level; x++)
+                {
+                    result.Append("  ");
+                }
                 result.Append('{');
+                result.Append("\r\n");
                 TypeCache cache = null;
                 if (!typeCache.TryGetValue(dataType, out cache))
                 {
@@ -138,44 +200,82 @@ namespace FastSerialize
                     typeCache.TryAdd(dataType, cache);
                 }
                 int count = 0;
+                bool first = true;
+                level++;
+                if (typeHints)
+                {
+
+                    for (int x = 0; x < level; x++)
+                    {
+                        result.Append("  ");
+                    }
+
+                    result.Append("\"__type\"");
+                    result.Append(':');
+                    result.Append('"');
+                    result.Append(dataType.Name);
+                    result.Append("#");
+                    result.Append(dataType.Namespace);
+                    result.Append('"');
+                    first = false;
+                }
                 foreach (string key in cache.properties.Keys)
                 {
                     if (cache.properties[key].getter == null)
-                    {
                         continue;
-                    }
                     object pObj = cache.properties[key].getter(o);
                     if (pObj != null)
                     {
+                        if (!first)
+                        {
+                            result.Append(',');
+                            result.Append("\r\n");
+
+                        }
+                        first = false;
+                        for (int x = 0; x < level; x++)
+                        {
+                            result.Append("  ");
+                        }
+
                         result.Append('"');
                         result.Append(key);
                         result.Append('"');
                         result.Append(':');
-                        SerializeObject(pObj, result, outputNull, typeHints);
-                        if (count < cache.properties.Keys.Count - 1)
+                        SerializeObject(pObj, result, level, true, outputNull, typeHints);
+                    }
+                    else if (outputNull)
+                    {
+                        if (!first)
                         {
                             result.Append(',');
                             result.Append("\r\n");
                         }
-                    }
-                    else if (outputNull) {
+                        first = false;
+
+                        for (int x = 0; x < level; x++)
+                        {
+                            result.Append("  ");
+                        }
+
                         result.Append('"');
                         result.Append(key);
                         result.Append('"');
                         result.Append(':');
                         result.Append("null");
-                        if (count < cache.properties.Keys.Count - 1)
-                        {
-
-                            result.Append(',');
-                            result.Append("\r\n");
-                        }
                     }
                     count++;
                 }
-                result.Append('}');
                 result.Append("\r\n");
+                for (int x = 0; x < level - 1; x++)
+                {
+                    result.Append("  ");
+                }
+                result.Append('}');
+                //result.Append("\r\n");
+
             }
+
         }
 
         public T Deserialize<T>(Stream s,bool @explicit = true)
@@ -192,7 +292,7 @@ namespace FastSerialize
                 switch (c)
                 {
                     case '{':
-                        return ConsumeObject<T>(s, ref x);
+                        return ConsumeObject<T>(s, @explicit, ref x);
                     case '[':
                         var listType = typeof(T);
                         Type objectType = null;
@@ -219,7 +319,7 @@ namespace FastSerialize
                         if (objectType != null)
                         {
                             IList list = (IList)TypeHelper.GetConstructor(listType)();
-                            return (T)ConsumeArray(s, list, objectType, ref x);
+                            return (T)ConsumeArray(s, list, objectType, @explicit, ref x);
                         }
                         throw new Exception("Cannot deserialize array into non-collection type");
                     case ' ':
@@ -233,7 +333,7 @@ namespace FastSerialize
             }
             return default(T);
         }
-        private object ConsumeArray(string s, IList list, Type objectType, ref int index)
+        private object ConsumeArray(string s, IList list, Type objectType, bool @explicit, ref int index)
         {
             index++;
             char c;
@@ -255,7 +355,7 @@ namespace FastSerialize
                     case '}':
                         return list;
                     default:
-                        list.Add(ConsumeValue(s, ref index, objectType));
+                        list.Add(ConsumeValue(s, @explicit, ref index, objectType));
                         if (s[index] == ']')
                             index--;
                         break;
@@ -329,13 +429,20 @@ namespace FastSerialize
                 c = s[index];
                 switch (c)
                 {
-                    case ',':
-                    case '}':
-                    case ']':
-                        goto parsed;
-                    default:
+                    case 'f':
+                    case 'a':
+                    case 'l':
+                    case 's':
+                    case 't':
+                    case 'r':
+                    case 'u':
                         bldr.Append(c);
                         break;
+                    case 'e':
+                        bldr.Append(c);
+                        goto parsed;
+                    default:
+                        throw new Exception("Unexpected character in boolean value");
                 }
             }
         parsed:
@@ -421,12 +528,26 @@ namespace FastSerialize
             }
             throw new Exception("Unexpected character when reading value, expected null: " + s[index]);
         }
-        private T ConsumeObject<T>(string s, ref int index)
+        private T ConsumeObject<T>(string s, bool @explicit, ref int index)
         {
-            return (T)ConsumeObject(s, typeof(T), ref index);
+            var type = typeof(T);
+            if (type.IsGenericType)
+            {
+                foreach (var i in type.GetInterfaces())
+                {
+                    if (i == typeof(IDictionary))
+                    {
+
+                        var dict = (IDictionary)TypeHelper.GetConstructor(type)();
+                        var genericType = type.GetGenericArguments()[1];
+                        return (T)ConsumeIntoDictionary(s,ref index, dict, genericType, @explicit);
+                    }
+                }
+            }
+            return (T)ConsumeObject(s, typeof(T), @explicit, ref index);
         }
 
-        private object ConsumeObject(string s, Type instanceType, ref int index)
+        private object ConsumeObject(string s, Type instanceType, bool @explicit, ref int index)
         {
             index++;
             TypeCache cache;
@@ -435,7 +556,7 @@ namespace FastSerialize
                 cache = new TypeCache(instanceType);
                 typeCache.TryAdd(instanceType, cache);
             }
-            Object instance = cache.constructor();
+            Object instance = null;
             char c;
             for (; index < s.Length; index++)
             {
@@ -445,6 +566,37 @@ namespace FastSerialize
                 {
                     case '"':
                         string propertyName = ParseString(s, ref index);
+                        if (propertyName == "__type")
+                        {
+                            ++index;
+                            if (!ConsumeWhiteSpace(s, ref index))
+                                throw new Exception("Parse Error");
+                            if (s[index++] != ':')
+                                throw new Exception("Parse Error");
+                            if (!ConsumeWhiteSpace(s, ref index))
+                                throw new Exception("Parse Error");
+                            string propertyType = ParseString(s, ref index);
+
+                            var newType = TypeHelper.ResolveType(propertyType);
+
+                            if (instanceType == newType)
+                            {
+                                instance = cache.constructor();
+                                continue;
+                            }
+                            instanceType = newType;
+                            if (!typeCache.TryGetValue(instanceType, out cache))
+                            {
+                                cache = new TypeCache(instanceType);
+                                typeCache.TryAdd(instanceType, cache);
+                            }
+                            instance = cache.constructor();
+                            continue;
+                        }
+                        else if (instance == null)
+                        {
+                            instance = cache.constructor();
+                        }
                         PropertyAccessor accessor;
                         if (!cache.properties.TryGetValue(propertyName, out accessor))
                         {
@@ -466,7 +618,7 @@ namespace FastSerialize
                                             accessor = property.Value;
                                         }
                                     }
-                                    else if (property.Value.ignoreCase != null)
+                                    else if (property.Value.ignoreCase)
                                     {
                                         if (propertyName.ToLower() == property.Key.ToLower())
                                         {
@@ -475,7 +627,7 @@ namespace FastSerialize
                                     }
                                 }
                             }
-                            if (accessor == null)
+                            if (accessor == null && @explicit)
                                 throw new Exception("No such field: " + propertyName);
                         }
                         ++index;
@@ -496,10 +648,10 @@ namespace FastSerialize
                                 IDictionary dict = (IDictionary)accessor.getter(instance);
                                 if (dict == null)
                                     dict = (IDictionary)TypeHelper.GetConstructor(accessor.type)();
-                                accessor.setter(instance, ConsumeIntoDictionary(s, ref index, dict, accessor.genericType));
+                                accessor.setter(instance, ConsumeIntoDictionary(s, ref index, dict, accessor.genericType, @explicit));
                                 break;
                             }
-                            accessor.setter(instance, ConsumeValue(s, ref index, accessor.type));
+                            accessor.setter(instance, ConsumeValue(s, @explicit, ref index, accessor.type));
                             if (s[index] == '}')
                                 index--;
                         }
@@ -515,7 +667,7 @@ namespace FastSerialize
 
             return instance;
         }
-        private object ConsumeObjectIntoDictionary(string s, IDictionary dict, Type instanceType, ref int index)
+        private object ConsumeObjectIntoDictionary(string s, IDictionary dict, Type instanceType, bool @explicit, ref int index)
         {
             index++;
             char c;
@@ -546,7 +698,7 @@ namespace FastSerialize
                             break;
                         }*/
                         //accessor.setter(instance, );
-                        dict.Add(propertyName, ConsumeValue(s, ref index, instanceType));
+                        dict.Add(propertyName, ConsumeValue(s, @explicit, ref index, instanceType));
                         break;
                     case ',':
                         continue;
@@ -624,11 +776,11 @@ namespace FastSerialize
                 }
             }
         }
-        private T ConsumeValue<T>(string s, ref int index)
+        private T ConsumeValue<T>(string s, bool @explicit, ref int index)
         {
-            return (T)ConsumeValue(s, ref index, typeof(T));
+            return (T)ConsumeValue(s, @explicit, ref index, typeof(T));
         }
-        private object ConsumeValue(string s, ref int index, Type type)
+        private object ConsumeValue(string s, bool @explicit, ref int index, Type type)
         {
             char c;
             for (; index < s.Length; index++)
@@ -696,11 +848,11 @@ namespace FastSerialize
                         if (objectType != null)
                         {
                             IList list = (IList)TypeHelper.GetConstructor(listType)();
-                            return ConsumeArray(s, list, objectType, ref index);
+                            return ConsumeArray(s, list, objectType, @explicit, ref index);
                         }
                         throw new Exception("Cannot deserialize array into non-collection type");
                     case '{':
-                        return ConsumeObject(s, type, ref index);
+                        return ConsumeObject(s, type, @explicit, ref index);
                     default:
                         if (type == typeof(bool))
                         {
@@ -724,7 +876,7 @@ namespace FastSerialize
             }
             return null;
         }
-        private object ConsumeIntoDictionary(string s, ref int index, IDictionary dict, Type type)
+        private object ConsumeIntoDictionary(string s, ref int index, IDictionary dict, Type type, bool @explicit)
         {
             
             char c;
@@ -735,7 +887,7 @@ namespace FastSerialize
                 {
                     
                     case '{':
-                        return ConsumeObjectIntoDictionary(s, dict, type, ref index);
+                        return ConsumeObjectIntoDictionary(s, dict, type, @explicit, ref index);
                     default:
                         throw new Exception("Unexpected character when reading dictionary value: " + c);
                 }

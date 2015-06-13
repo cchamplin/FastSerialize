@@ -24,7 +24,6 @@ namespace FastSerialize
 
             if (stream != null)
             {
-
                 for (int x = stream.ReadByte(); x != -1; x = stream.ReadByte())
                     yield return (char)x;
             }

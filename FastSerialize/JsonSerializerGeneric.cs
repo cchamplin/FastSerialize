@@ -148,6 +148,12 @@ namespace FastSerialize
                 {
                     result.Append(o.ToString().ToLower());
                 }
+                else if (dataType == typeof(Guid))
+                {
+                    result.Append("\"");
+                    result.Append(o.ToString());
+                    result.Append("\"");
+                }
                 else if (dataType == typeof(TimeSpan))
                 {
                     result.Append("\"");
@@ -350,10 +356,13 @@ namespace FastSerialize
                      default:
 
                          list.Add(ConsumeValue(s, objectType, @explicit));
+                         if ((char)s.Current == ']')
+                             return list;
                          break;
                  }
              } while (s.MoveNext());
-             throw new Exception("Unexpected character");
+             return list;
+             //throw new Exception("Unexpected character");
         }
         private int parseUnicode(char a, char b, char c, char d)
         {
@@ -419,13 +428,20 @@ namespace FastSerialize
                 c = (char)s.Current;
                 switch (c)
                 {
-                    case ',':
-                    case '}':
-                    case ']':
-                        goto parsed;
-                    default:
+                    case 'f':
+                    case 'a':
+                    case 'l':
+                    case 's':
+                    case 't':
+                    case 'r':
+                    case 'u':
                         bldr.Append(c);
                         break;
+                    case 'e':
+                        bldr.Append(c);
+                        goto parsed;
+                    default:
+                        throw new Exception("Unexpected character in boolean value");
                 }
             } while (s.MoveNext());
         parsed:
@@ -662,12 +678,17 @@ namespace FastSerialize
                                 break;
                             }
                             accessor.setter(instance, ConsumeValue(s, accessor.type, @explicit));
-
+                            if ((char)s.Current == '}')
+                            {
+                                s.MoveNext();
+                                return instance;
+                            }
                         }
                         break;
                     case ',':
                         continue;
                     case '}':
+                        s.MoveNext();
                         return instance;
                 }
             } while (s.MoveNext());

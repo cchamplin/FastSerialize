@@ -40,5 +40,13 @@ namespace FastSerialize
         {
             return _serializer.Deserialize<T>(s, @explicit);
         }
+        public object Deserialize(Type t, String s, bool @explicit = true)
+        {
+            return _serializer.Deserialize(t, s, @explicit);
+        }
+        public object Deserialize(Type t, Stream s, bool @explicit = true)
+        {
+            return _serializer.Deserialize(t, s, @explicit);
+        }
     }
 }

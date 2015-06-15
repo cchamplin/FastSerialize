@@ -5,7 +5,8 @@ using System.Text;
 
 namespace FastSerialize
 {
-    class ISerializable
+    public interface ISerializable
     {
+        string GetData();
     }
 }

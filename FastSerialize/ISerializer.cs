@@ -15,5 +15,7 @@ namespace FastSerialize
 
         T Deserialize<T>(String s, bool @explicit = true);
         T Deserialize<T>(Stream s, bool @explicit = true);
+        object Deserialize(Type t, Stream s, bool @explicit = true);
+        object Deserialize(Type t, string s, bool @explicit = true);
     }
 }

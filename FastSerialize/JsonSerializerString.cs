@@ -50,11 +50,15 @@ namespace FastSerialize
             if (outputNull && o == null)
                 result.Append("null");
             Type dataType = o.GetType();
-            if (dataType.IsGenericType)
+            if (o is ISerializable)
+            {
+                result.Append(((ISerializable)o).GetData());
+            }
+            else if (dataType.IsGenericType)
             {
                 foreach (Type iType in dataType.GetInterfaces())
                 {
-                    if (iType == typeof(IList))
+                   if (iType == typeof(IList))
                     {
                         if (!propValue)
                         {
@@ -85,7 +89,7 @@ namespace FastSerialize
                         //result.Append("\r\n");
                         break;
                     }
-                    if (iType == typeof(IDictionary))
+                    else if (iType == typeof(IDictionary))
                     {
                         bool first = true;
                         if (!propValue)
@@ -276,6 +280,74 @@ namespace FastSerialize
 
             }
 
+        }
+
+        public object Deserialize(Type t, Stream s, bool @explicit = true)
+        {
+            throw new NotImplementedException();
+        }
+        public object Deserialize(Type t, string s, bool @explicit = true)
+        {
+
+            char c;
+            for (int x = 0; x < s.Length; x++)
+            {
+                c = s[x];
+                switch (c)
+                {
+                    case '{':
+                        if (t.IsGenericType)
+                        {
+                            foreach (var i in t.GetInterfaces())
+                            {
+                                if (i == typeof(IDictionary))
+                                {
+
+                                    var dict = (IDictionary)TypeHelper.GetConstructor(t)();
+                                    var genericType = t.GetGenericArguments()[1];
+                                    return ConsumeIntoDictionary(s, ref x, dict, genericType, @explicit);
+                                }
+                            }
+                        }
+                        return ConsumeObject(s,t, @explicit, ref x);
+                    case '[':
+                        Type objectType = null;
+                        if (t == typeof(Array) || t.IsArray == true)
+                        {
+                            // Todo figure out a way to handle arrays
+                            // Possible solution at the cost of performance would be to look ahead
+                            // and count the number of items.
+                            // Alternatively we could initialize a collection type and then call ToArray();
+                            throw new Exception("Cannot deserialize array into non-collection type");
+                        }
+                        if (t.IsGenericType)
+                        {
+                            // TODO look into handling other types of collections
+                            foreach (var i in t.GetInterfaces())
+                            {
+                                if (i == typeof(IList))
+                                {
+                                    objectType = t.GetGenericArguments()[0];
+                                    break;
+                                }
+                            }
+                        }
+                        if (objectType != null)
+                        {
+                            IList list = (IList)TypeHelper.GetConstructor(t)();
+                            return ConsumeArray(s, list, objectType, @explicit, ref x);
+                        }
+                        throw new Exception("Cannot deserialize array into non-collection type");
+                    case ' ':
+                    case '\t':
+                    case '\n':
+                    case '\r':
+                        continue;
+                    default:
+                        throw new Exception("Unexpected character");
+                }
+            }
+            return null;
         }
 
         public T Deserialize<T>(Stream s,bool @explicit = true)

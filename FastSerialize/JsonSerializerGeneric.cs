@@ -49,7 +49,11 @@ namespace FastSerialize
             if (outputNull && o == null)
                 result.Append("null");
             Type dataType = o.GetType();
-            if (dataType.IsGenericType)
+            if (o is ISerializable)
+            {
+                result.Append(((ISerializable)o).GetData());
+            }
+            else if (dataType.IsGenericType)
             {
                 foreach (Type iType in dataType.GetInterfaces())
                 {
@@ -84,7 +88,7 @@ namespace FastSerialize
                         //result.Append("\r\n");
                         break;
                     }
-                    if (iType == typeof(IDictionary))
+                    else if (iType == typeof(IDictionary))
                     {
                         bool first = true;
                         if (!propValue)
@@ -277,6 +281,16 @@ namespace FastSerialize
 
         }
 
+        public object Deserialize(Type t, Stream s, bool @explicit = true)
+        {
+            return Deserialize(t, s.AsEnumerableChar().GetEnumerator(), @explicit);
+        }
+        public object Deserialize(Type t, string s, bool @explicit = true)
+        {
+            return Deserialize(t, s.GetEnumerator(), @explicit);
+        }
+
+
         public T Deserialize<T>(Stream s, bool @explicit = true)
         {
             return Deserialize<T>(s.AsEnumerableChar().GetEnumerator(), @explicit);
@@ -332,6 +346,68 @@ namespace FastSerialize
                 }
             }
             return default(T);
+        }
+        public object Deserialize(Type t, IEnumerator s, bool @explicit)
+        {
+
+            char c = ' ';
+            while (s.MoveNext())
+            {
+                c = (char)s.Current;
+                switch (c)
+                {
+                    case '{':
+
+                        if (t.IsGenericType)
+                        {
+                            foreach (var i in t.GetInterfaces())
+                            {
+                                if (i == typeof(IDictionary))
+                                {
+
+                                    var dict = (IDictionary)TypeHelper.GetConstructor(t)();
+                                    var genericType = t.GetGenericArguments()[1];
+                                    return ConsumeIntoDictionary(s, dict, genericType, @explicit);
+                                }
+                            }
+                        }
+                        return ConsumeObject(s, t, @explicit);
+                    case '[':
+                       
+                        Type objectType = null;
+                        if (t == typeof(Array))
+                        {
+                            break;
+                        }
+                        if (t.IsGenericType)
+                        {
+                            foreach (var i in t.GetInterfaces())
+                            {
+                                if (i == typeof(IList))
+                                {
+                                    objectType = t.GetGenericArguments()[0];
+                                    break;
+                                }
+                            }
+                            //Generic Type
+                        }
+                        if (objectType != null)
+                        {
+                            IList list = (IList)TypeHelper.GetConstructor(t)();
+                            return ConsumeArray(s, list, objectType, @explicit);
+                        }
+                        throw new Exception("Cannot deserialize array into non-collection type");
+                    case ' ':
+                    case '\t':
+                    case '\n':
+                    case '\r':
+                        continue;
+                    default:
+                        throw new Exception("Unexpected character");
+
+                }
+            }
+            return null;
         }
         private object ConsumeArray(IEnumerator s, IList list, Type objectType, bool @explicit)
         {

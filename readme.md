@@ -20,13 +20,13 @@ High performance .NET JSON encoder/decoder
 
 ### FAQ
 
-**Q: I see the same snippets of code in many places, why don't you write clean code that can be reused?**
+**Q: I see the same snippets of code in many places, why aren't you reusing code?**
 
 A: Occasionally you have to sacrifice abstraction and to an extent code maintainability to achieve greater performance. For a library as small as this serializer is I'm not too concerned.
 
 **Q: Why doesn't it deserialize/serialize X class? Why isn't X feature supported? I found a bug!**
 
-A: Create an issue and I will look into it.
+A: Create an issue and I will look into it for sure!
 
 **Q: If you do X you get can get a Y% performance increase!**
 
